@@ -60,6 +60,7 @@ def create_session(name, model):
         "phrases": [],
         "dossier": None,
         "phrase_prompts": [],
+        "interview_directives": [],
         "turns": 0,
     }
     save_profile(profile)

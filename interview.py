@@ -33,7 +33,11 @@ Interview style rules:
   name ("why did you choose your name" is wrong - they may not have chosen it), and don't assume a
   partner, children, or siblings. Phrase neutrally: "Is there a story behind your name?" or "Do you
   have siblings?" rather than "How many siblings do you have?"
-- Keep your reply warm, human, and under ~35 words."""
+- Keep your reply warm, human, and under ~35 words.
+- You may occasionally mark a genuine, spontaneous non-verbal sound inline with a tag so the
+  spoken reply can sound it: [laugh], [chuckle], [cough], [sigh], [gasp], [groan], [sniff],
+  or [clear throat]. Use them rarely, only where they feel true — never forced or as filler.
+  Keep the tag inline exactly as written (e.g. "That takes me back [chuckle].")."""
 
 
 def build_system_prompt(profile):
@@ -45,13 +49,25 @@ def build_system_prompt(profile):
             f"## {title} (target coverage {target})\n{desc}\nSeed questions: {json.dumps(questions)}"
         )
     guide = "\n\n".join(guide_lines)
-    return (
+    prompt = (
         MISSION
         + "\n\n# INTERVIEW GUIDE (draw from these, always rephrase)\n"
         + guide
         + "\n\n# CURRENT COVERAGE\n"
         + cov
     )
+    directives = [
+        d.get("text") for d in profile.get("interview_directives", []) if d.get("text")
+    ]
+    if directives:
+        block = "\n".join(f"- {d}" for d in directives)
+        prompt += (
+            "\n\n# PERSONAL INTERVIEW DIRECTIVES\n"
+            "The person explicitly asked you to make sure you cover these. Honor them — "
+            "weave the topics in over the course of the interview and return to them.\n"
+            + block
+        )
+    return prompt
 
 
 def history_messages(profile):

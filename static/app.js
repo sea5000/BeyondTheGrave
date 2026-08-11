@@ -90,10 +90,14 @@
     return d;
   }
 
+  function stripTags(text) {
+    return (text || "").replace(/\[[a-z][a-z ]*\]/gi, "");
+  }
+
   function addAiMsg(log, text) {
     const d = document.createElement("div");
     d.className = "msg ai";
-    d.textContent = text;
+    d.textContent = stripTags(text);
     const btn = document.createElement("button");
     btn.className = "speak-btn";
     btn.textContent = "🔊 hear it";
@@ -323,6 +327,7 @@
     show("screen-interview");
     $("#interview-hint").textContent = "Take your time. The more specific you are, the more real your echo will be.";
     $("#answer").focus();
+    refreshDirectives();
   }
 
   function renderInterview(s) {
@@ -336,6 +341,7 @@
     $("#btn-finish").style.display = "";
     show("screen-interview");
     $("#answer").focus();
+    refreshDirectives();
   }
 
   /* ================= INTERVIEW ================= */
@@ -516,6 +522,8 @@
     }
     show("screen-clone");
     $("#clone-msg").focus();
+    refreshDirectives();
+    renderVersions();
   }
 
   $("#train-mode").onchange = () => {
@@ -566,6 +574,129 @@
   $("#clone-msg").addEventListener("keydown", (e) => {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); cloneSend(); }
   });
+
+  /* ================= INTERVIEWER TRAINING + VERSION CONTROL ================= */
+  function hintEl(text) {
+    const p = document.createElement("p");
+    p.className = "hint";
+    p.textContent = text;
+    return p;
+  }
+
+  async function renderDirectives(targetId) {
+    const wrap = $(targetId);
+    wrap.innerHTML = "";
+    if (!SESSION_ID) return;
+    let ds = [];
+    try {
+      const r = await api(`/api/session/${SESSION_ID}/directives`);
+      ds = r.directives || [];
+    } catch (e) { wrap.appendChild(hintEl("⚠ " + e.message)); return; }
+    if (!ds.length) { wrap.appendChild(hintEl("No directives yet.")); return; }
+    ds.forEach((d) => {
+      const row = document.createElement("div");
+      row.className = "directive-item";
+      const span = document.createElement("span");
+      span.textContent = d.text;
+      const rm = document.createElement("button");
+      rm.className = "ghost small";
+      rm.textContent = "remove";
+      rm.onclick = async () => {
+        try {
+          await api(`/api/session/${SESSION_ID}/directives/${d.id}`, { method: "DELETE" });
+          refreshDirectives();
+        } catch (e) { alert(e.message); }
+      };
+      row.appendChild(span); row.appendChild(rm);
+      wrap.appendChild(row);
+    });
+  }
+
+  async function refreshDirectives() {
+    await Promise.all([
+      renderDirectives("#directives-interview"),
+      renderDirectives("#directives-clone"),
+    ]);
+  }
+
+  function bindDirectiveAdd(btnId, inputId) {
+    $(btnId).onclick = async () => {
+      const inp = $(inputId);
+      const text = inp.value.trim();
+      if (!text) return;
+      try {
+        await api(`/api/session/${SESSION_ID}/directives`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text }),
+        });
+        inp.value = "";
+        refreshDirectives();
+      } catch (e) { alert(e.message); }
+    };
+  }
+  bindDirectiveAdd("#btn-directive-add-interview", "#directive-text-interview");
+  bindDirectiveAdd("#btn-directive-add-clone", "#directive-text-clone");
+
+  async function renderVersions() {
+    const wrap = $("#version-list");
+    wrap.innerHTML = "";
+    if (!SESSION_ID) return;
+    let vs = [];
+    try {
+      const r = await api(`/api/session/${SESSION_ID}/versions`);
+      vs = r.versions || [];
+    } catch (e) { wrap.appendChild(hintEl("⚠ " + e.message)); return; }
+    if (!vs.length) {
+      wrap.appendChild(hintEl("No snapshots yet. Training, directives, and the memory file are saved automatically — restore any snapshot to undo a change."));
+      return;
+    }
+    vs.forEach((v) => {
+      const s = v.summary || {};
+      const meta = `${(v.ts || "").replace("T", " ").slice(0, 19)} · ${s.facts ?? 0} facts · ${s.directives ?? 0} directives · ${s.turns ?? 0} turns${s.has_dossier ? " · memory ✓" : ""}`;
+      const row = document.createElement("div");
+      row.className = "version-item";
+      row.innerHTML = `
+        <div class="version-main">
+          <div class="version-label">${esc(v.label)}</div>
+          <div class="version-meta">${esc(meta)}</div>
+        </div>
+        <div class="version-actions">
+          <button class="ghost small v-restore">Restore</button>
+          <button class="ghost small v-del" title="Delete snapshot">×</button>
+        </div>`;
+      row.querySelector(".v-restore").onclick = async () => {
+        if (!confirm(`Restore “${v.label}” (${meta})? Your current state is saved first, so this can be undone.`)) return;
+        try {
+          await api(`/api/session/${SESSION_ID}/versions/${v.id}/restore`, { method: "POST" });
+          openProfile(SESSION_ID);
+        } catch (e) { alert(e.message); }
+      };
+      row.querySelector(".v-del").onclick = async () => {
+        try {
+          await api(`/api/session/${SESSION_ID}/versions/${v.id}`, { method: "DELETE" });
+          renderVersions();
+        } catch (e) { alert(e.message); }
+      };
+      wrap.appendChild(row);
+    });
+  }
+
+  $("#btn-checkpoint").onclick = async () => {
+    try {
+      await api(`/api/session/${SESSION_ID}/versions`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ label: "manual checkpoint" }),
+      });
+      renderVersions();
+    } catch (e) { alert(e.message); }
+  };
+
+  $("#btn-resume-interview").onclick = async () => {
+    try {
+      await api(`/api/session/${SESSION_ID}/interview/resume`, { method: "POST" });
+      openProfile(SESSION_ID);
+    } catch (e) { alert(e.message); }
+  };
 
   /* ================= BOOT ================= */
   loadModels();

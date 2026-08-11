@@ -97,6 +97,15 @@
         <button id="btn-send" class="primary">Send</button>
       </div>
       <p id="interview-hint" class="hint">Take your time. The more specific you are, the more real your echo will be.</p>
+      <details class="panel">
+        <summary>🎓 Teach the interviewer</summary>
+        <p class="hint">Tell the interviewer things it must keep asking about — key relationships, stories, people, places. It will weave these in and return to them.</p>
+        <div id="directives-interview" class="directive-list"></div>
+        <div class="directive-add">
+          <input id="directive-text-interview" type="text" placeholder="e.g. Always ask about my relationship with my sister Amy." />
+          <button id="btn-directive-add-interview" class="ghost small">Teach it</button>
+        </div>
+      </details>
     </div>
   </section>
 
@@ -145,11 +154,30 @@
         <textarea id="clone-msg" rows="2" placeholder="Talk to your echo…"></textarea>
         <button id="btn-clone-send" class="primary">Send</button>
       </div>
+      <details class="panel" id="history-panel">
+        <summary>🕘 History &amp; controls</summary>
+        <div class="sec">
+          <h3>Interviewer training</h3>
+          <p class="hint">Teach the interviewer what to keep asking about. These take effect when the interview is open.</p>
+          <div id="directives-clone" class="directive-list"></div>
+          <div class="directive-add">
+            <input id="directive-text-clone" type="text" placeholder="e.g. Make sure to ask about the lake house story." />
+            <button id="btn-directive-add-clone" class="ghost small">Teach it</button>
+          </div>
+          <button id="btn-resume-interview" class="ghost small">Open the interview →</button>
+        </div>
+        <div class="sec">
+          <h3>Snapshots &amp; undo</h3>
+          <p class="hint">Every change the AI makes to itself (training, directives, the memory file) is snapshotted. Restore any snapshot to undo it — the current state is saved first, so a restore can itself be undone.</p>
+          <button id="btn-checkpoint" class="ghost small">Save checkpoint now</button>
+          <div id="version-list" class="version-list"></div>
+        </div>
+      </details>
     </div>
   </section>
 </main>
 
-<footer class="foot">Local demo · LM Studio + Audio8 TTS · nothing leaves this machine</footer>
+<footer class="foot">Local demo · LM Studio + Chatterbox-Nano · nothing leaves this machine</footer>
 <script src="/app.js"></script>
 </body>
 </html>

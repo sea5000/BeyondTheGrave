@@ -166,6 +166,33 @@ button.danger { background: var(--rec); border-color: var(--rec); color: #1a0c0c
 .dossier h1, .dossier h2, .dossier h3 { color: var(--gold); font-family: var(--serif); }
 .clone-intro { margin: 0 20px 6px; }
 
+/* collapsible control panels */
+details.panel {
+  margin-top: 14px; background: var(--card-2); border: 1px solid var(--line);
+  border-radius: 10px; padding: 4px 16px 12px;
+}
+details.panel summary {
+  cursor: pointer; padding: 10px 0; font-weight: 600; color: var(--gold);
+  font-family: var(--serif); font-size: 15px; user-select: none;
+}
+details.panel .sec { margin-top: 12px; }
+details.panel .sec h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0 0 4px; }
+
+.directive-list, .version-list { display: flex; flex-direction: column; gap: 8px; margin: 8px 0; }
+.directive-item, .version-item {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px;
+  font-size: 14px;
+}
+.directive-item span { flex: 1; }
+.directive-add { display: flex; gap: 8px; margin-top: 8px; }
+.directive-add input { flex: 1; }
+
+.version-main { display: flex; flex-direction: column; gap: 2px; }
+.version-label { font-weight: 600; }
+.version-meta { font-size: 12px; color: var(--muted); }
+.version-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
 @media (max-width: 640px) {
   .topbar { flex-direction: column; gap: 4px; }
   .chat-card { height: calc(100vh - 200px); }

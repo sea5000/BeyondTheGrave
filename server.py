@@ -2,6 +2,7 @@ import os
 import re
 import uuid
 
+import soundfile as sf
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 
@@ -11,6 +12,7 @@ import llm
 import persona
 import storage
 import tts_service
+import versions
 
 app = Flask(__name__, static_folder="static", static_url_path="")
 CORS(app)
@@ -112,6 +114,7 @@ def _public_profile(profile):
         ],
         "phrase_prompts": profile.get("phrase_prompts", []),
         "dossier": profile.get("dossier"),
+        "directives": profile.get("interview_directives", []),
         "turns": profile.get("turns", 0),
     }
 
@@ -143,6 +146,13 @@ def upload_reference(sid):
         wav = audio.save_upload(f, storage.session_abs_path(profile, "voice"), "ref")
     except Exception as e:
         return jsonify({"error": f"audio conversion failed: {e}"}), 500
+    try:
+        dur = sf.info(wav).duration
+    except Exception as e:
+        return jsonify({"error": f"could not read recorded audio: {e}"}), 500
+    if dur < 5.0:
+        os.remove(wav)
+        return jsonify({"error": f"reference voice must be at least 5 seconds long (recorded {dur:.1f}s)"}), 400
     profile["voice_ref"] = {"path": storage._rel(profile, wav), "text": text}
     storage.save_profile(profile)
     return jsonify({"ok": True, "path": profile["voice_ref"]["path"]})
@@ -226,6 +236,93 @@ def finish(sid):
     return jsonify({"phase": "phrases", "phrase_prompts": prompts})
 
 
+@app.post("/api/session/<sid>/interview/resume")
+def interview_resume(sid):
+    profile = storage.load_profile(sid)
+    if not profile:
+        return jsonify({"error": "session not found"}), 404
+    profile["phase"] = "interview"
+    storage.save_profile(profile)
+    return jsonify({"phase": "interview", "coverage": profile["topics_coverage"]})
+
+
+@app.get("/api/session/<sid>/directives")
+def list_directives(sid):
+    profile = storage.load_profile(sid)
+    if not profile:
+        return jsonify({"error": "session not found"}), 404
+    return jsonify({"directives": profile.get("interview_directives", [])})
+
+
+@app.post("/api/session/<sid>/directives")
+def add_directive(sid):
+    profile = storage.load_profile(sid)
+    if not profile:
+        return jsonify({"error": "session not found"}), 404
+    data = request.get_json(silent=True) or {}
+    text = (data.get("text") or "").strip()
+    if not text:
+        return jsonify({"error": "directive is required"}), 400
+    d = {"id": uuid.uuid4().hex[:8], "text": text, "created": storage._now()}
+    profile.setdefault("interview_directives", []).append(d)
+    storage.save_profile(profile)
+    versions.snapshot(profile, "directive added")
+    return jsonify(d)
+
+
+@app.delete("/api/session/<sid>/directives/<did>")
+def remove_directive(sid, did):
+    profile = storage.load_profile(sid)
+    if not profile:
+        return jsonify({"error": "session not found"}), 404
+    profile["interview_directives"] = [
+        d for d in profile.get("interview_directives", []) if d.get("id") != did
+    ]
+    storage.save_profile(profile)
+    versions.snapshot(profile, "directive removed")
+    return jsonify({"ok": True, "directives": profile["interview_directives"]})
+
+
+@app.get("/api/session/<sid>/versions")
+def get_versions(sid):
+    profile = storage.load_profile(sid)
+    if not profile:
+        return jsonify({"error": "session not found"}), 404
+    return jsonify({"versions": versions.list_versions(profile)})
+
+
+@app.post("/api/session/<sid>/versions")
+def save_checkpoint(sid):
+    profile = storage.load_profile(sid)
+    if not profile:
+        return jsonify({"error": "session not found"}), 404
+    data = request.get_json(silent=True) or {}
+    v = versions.snapshot(profile, (data.get("label") or "checkpoint").strip()[:80])
+    return jsonify({"ok": True, "version": v})
+
+
+@app.post("/api/session/<sid>/versions/<vid>/restore")
+def restore_version(sid, vid):
+    profile = storage.load_profile(sid)
+    if not profile:
+        return jsonify({"error": "session not found"}), 404
+    restored = versions.restore(profile, vid)
+    if restored is None:
+        return jsonify({"error": "version not found"}), 404
+    versions.snapshot(profile, "before restore")
+    storage.save_profile(restored)
+    return jsonify(_public_profile(restored))
+
+
+@app.delete("/api/session/<sid>/versions/<vid>")
+def delete_version(sid, vid):
+    profile = storage.load_profile(sid)
+    if not profile:
+        return jsonify({"error": "session not found"}), 404
+    versions.delete_version(profile, vid)
+    return jsonify({"ok": True})
+
+
 @app.post("/api/session/<sid>/dossier")
 def dossier(sid):
     profile = storage.load_profile(sid)
@@ -237,6 +334,7 @@ def dossier(sid):
         return jsonify({"error": f"dossier failed: {e}"}), 500
     profile["phase"] = "ready"
     storage.save_profile(profile)
+    versions.snapshot(profile, "memory built")
     return jsonify({"dossier": text, "phase": "ready"})
 
 
@@ -292,6 +390,7 @@ def train(sid):
         return jsonify({"error": f"train failed: {e}"}), 500
     profile["phase"] = "ready"
     storage.save_profile(profile)
+    versions.snapshot(profile, "after training")
     facts = result.get("facts", []) or []
     lines = [f"- {f['fact']}" for f in facts if f.get("fact")]
     if lines:

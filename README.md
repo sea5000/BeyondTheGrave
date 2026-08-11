@@ -5,7 +5,7 @@ speaking, and builds a **digital echo** — an AI that can talk about your life 
 your voice, for your loved ones.
 
 Everything runs locally. The interview LLM comes from **LM Studio** (OpenAI-compatible
-endpoint) and the voice is synthesized with **Audio8 TTS** (zero-shot voice cloning).
+endpoint) and the voice is synthesized with **Chatterbox-Nano** (zero-shot voice cloning with paralinguistic tags).
 
 ## How it works
 
@@ -18,7 +18,7 @@ Flask backend (python)
    │                  fact extraction, follow-up questions)
    ├─ persona.py      dossier builder + the "echo" system prompt + phrase prompts
    ├─ llm.py          LM Studio client (JSON extraction; qwen3.5 thinking workaround)
-   ├─ tts_service.py  Audio8-TTS-Preview-0.6b (zero-shot voice clone, GPU/CPU)
+   ├─ tts_service.py  Chatterbox-Nano (zero-shot voice clone, CPU)
    ├─ audio.py        ffmpeg webm → 44.1kHz mono wav
    └─ storage.py      per-session JSON profile (data/sessions/<id>/)
 ```
@@ -44,9 +44,14 @@ memory (dossier) file from everything it now knows.
 Voice works in two layers:
 1. **Recorded phrases** you speak aloud are stored verbatim and played back as-is
    (truest fidelity) whenever the exact text is spoken.
-2. **New text** is synthesized by Audio8 using your reference clip (zero-shot cloning).
-   Longer replies are split into short segments (Audio8's quality sweet spot) and
-   stitched back together so prosody stays natural.
+2. **New text** is synthesized by Chatterbox-Nano using your reference clip
+   (zero-shot cloning). Longer replies are split into short segments and stitched back
+   together so prosody stays natural.
+
+**Paralinguistic tags** are native to Chatterbox-Nano. The interviewer and the echo can
+occasionally mark genuine sounds inline — `[laugh]`, `[chuckle]`, `[cough]`, `[sigh]`,
+`[gasp]`, `[groan]`, `[sniff]`, `[clear throat]` — and they are rendered in the cloned
+voice. Tags are hidden from the chat bubbles but kept in the audio.
 
 ## Prerequisites
 
@@ -54,7 +59,7 @@ Voice works in two layers:
 - **LM Studio** running on `localhost:1234` with a chat model loaded
   (tested with `qwen/qwen3.5-9b`; `gemma-4-12b` and `deepseek-r1` also available).
 - `ffmpeg` on PATH
-- ~1.2GB of free GPU VRAM for TTS (falls back to CPU if no CUDA)
+- ~3GB disk for the Chatterbox-Nano weights (runs on CPU; no GPU required)
 
 ## Setup
 
@@ -63,7 +68,8 @@ python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 ```
 
-First TTS use downloads `Audio8/Audio8-TTS-Preview-0.6b` weights (~1.2GB).
+First TTS use downloads `ResembleAI/chatterbox-nano` weights (~3GB) into the Hugging Face
+cache. The reference voice must be **at least 5 seconds long**.
 
 ## Run
 
@@ -94,7 +100,7 @@ interview.py       interview engine (prompts, coverage, phases)
 topics.py          the 12-topic interview guide / question bank
 persona.py         fact grouping, dossier, clone system prompt, phrase prompts
 llm.py             LM Studio client
-tts_service.py     Audio8 synthesis wrapper
+tts_service.py     Chatterbox-Nano TTS wrapper
 audio.py           upload → wav conversion
 storage.py         session/profile persistence
 static/            index.html, app.js, style.css
@@ -103,7 +109,8 @@ data/sessions/     per-person JSON profiles + audio (created at runtime)
 
 ## Notes & caveats
 
-- Audio8 is a preview model; clone quality depends on a clean reference recording that
-  matches the shown transcript.
+- Chatterbox-Nano is a fast, expressive clone; quality depends on a clean reference
+  recording of at least 5 seconds that matches the shown transcript.
+- Every generated clip carries an inaudible Perth watermark (Resemble AI).
 - Everything is stored locally — nothing leaves this machine.
 - The demo includes a consent/disclosure step because it builds a voice likeness.
