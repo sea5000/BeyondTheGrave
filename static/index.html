@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Beyond the Grave</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='13' font-size='13'>🕯</text></svg>" />
+<link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-left">
+    <button id="btn-home" class="ghost brand-btn">Beyond the Grave</button>
+    <div class="tagline">an experiment in keeping a voice alive</div>
+  </div>
+  <div class="topbar-right">
+    <label class="topbar-model">
+      <span class="lbl">Model</span>
+      <select id="topbar-model"></select>
+    </label>
+    <span id="model-note" class="model-note"></span>
+  </div>
+</header>
+
+<main>
+  <!-- ============ HOME / CLONE MENU ============ -->
+  <section id="screen-home" class="screen active">
+    <div class="card hero">
+      <h1>Beyond the Grave</h1>
+      <p class="lede">
+        This is a guided interview that captures who you are &mdash; your story, the people you love,
+        your beliefs, and your exact way of speaking &mdash; so an AI can later talk to your loved
+        ones <em>as you</em>, in <em>your</em> voice.
+      </p>
+      <div class="home-grid">
+        <div class="home-col">
+          <h2>Create a new clone</h2>
+          <p class="hint">Record your voice, answer a gentle interview, and speak a few phrases to build a new likeness from scratch.</p>
+          <ol class="steps">
+            <li><span>1</span> Record a short voice sample</li>
+            <li><span>2</span> An AI interviewer asks about your life</li>
+            <li><span>3</span> Speak a few of your own phrases aloud</li>
+            <li><span>4</span> Meet your echo &mdash; and train it anytime</li>
+          </ol>
+          <div class="consent">
+            <label><input type="checkbox" id="consent" />
+              I understand this builds a <b>digital likeness</b> &mdash; including a clone of my voice &mdash;
+              and that everything is stored locally on this machine.</label>
+          </div>
+          <button id="btn-new" class="primary" disabled>Create a new clone</button>
+        </div>
+        <div class="home-col">
+          <h2>Saved clones</h2>
+          <p class="hint">Pick up where you left off, or just talk to a finished echo.</p>
+          <div id="profile-list"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SETUP ============ -->
+  <section id="screen-setup" class="screen">
+    <div class="card">
+      <h2>Let's set you up</h2>
+      <div class="field">
+        <label for="name">Your name</label>
+        <input id="name" type="text" placeholder="e.g. Spencer" autocomplete="off" />
+      </div>
+      <div class="field">
+        <label>Record your voice reference</label>
+        <p class="hint">Read this passage aloud, slowly and naturally &mdash; like you're talking to someone you love, not reading a script. Warmth and feeling carry into the voice clone.</p>
+        <blockquote class="passage">"Welcome to Beyond the Grave. This is my voice. I'm recording these words so the people I love can hear me again someday. I'll tell you a little about who I am, and how I speak."</blockquote>
+        <div class="recorder">
+          <button id="rec-ref" class="rec">● Record</button>
+          <button id="rec-ref-stop" class="danger" style="display:none">■ Stop</button>
+          <button id="rec-ref-play" class="ghost" style="display:none">Play</button>
+          <audio id="ref-audio" style="display:none"></audio>
+          <span id="ref-status" class="status"></span>
+        </div>
+        <p id="voice-done" class="status ok" style="display:none">✓ voice reference already recorded</p>
+      </div>
+      <button id="btn-start-interview" class="primary" disabled>Start the interview</button>
+    </div>
+  </section>
+
+  <!-- ============ INTERVIEW ============ -->
+  <section id="screen-interview" class="screen">
+    <div class="chat-card">
+      <div class="chat-head">
+        <h2 id="interview-title">The interview</h2>
+        <div id="coverage-wrap" class="coverage-wrap" title="Coverage per topic"></div>
+        <button id="btn-finish" class="ghost small">Finish interview →</button>
+      </div>
+      <div id="chat-log" class="chat-log"></div>
+      <div class="chat-input">
+        <textarea id="answer" rows="2" placeholder="Type your answer…"></textarea>
+        <button id="btn-send" class="primary">Send</button>
+      </div>
+      <p id="interview-hint" class="hint">Take your time. The more specific you are, the more real your echo will be.</p>
+    </div>
+  </section>
+
+  <!-- ============ PHRASES ============ -->
+  <section id="screen-phrases" class="screen">
+    <div class="card">
+      <h2>Say a few things in your voice</h2>
+      <p class="hint">Record each phrase aloud. These are kept as true recordings and used to shape your voice.</p>
+      <div id="phrase-list"></div>
+      <div class="field">
+        <label for="custom-phrase-text">Or write &amp; record your own</label>
+        <input id="custom-phrase-text" type="text" placeholder="e.g. I love you, Sarah. Take care of each other." />
+        <div class="recorder">
+          <button id="rec-custom" class="rec">● Record</button>
+          <button id="rec-custom-stop" class="danger" style="display:none">■ Stop</button>
+          <span id="custom-status" class="status"></span>
+        </div>
+      </div>
+      <button id="btn-build" class="primary">Build my echo →</button>
+    </div>
+  </section>
+
+  <!-- ============ DOSSIER ============ -->
+  <section id="screen-dossier" class="screen">
+    <div class="card">
+      <h2 id="dossier-title">Building your echo…</h2>
+      <p id="dossier-status" class="hint">Gathering everything you told us.</p>
+      <div id="dossier-body" class="dossier"></div>
+      <button id="btn-meet" class="primary" style="display:none">Meet my echo →</button>
+    </div>
+  </section>
+
+  <!-- ============ CLONE ============ -->
+  <section id="screen-clone" class="screen">
+    <div class="chat-card">
+      <div class="chat-head">
+        <h2 id="clone-name">Your echo</h2>
+        <div class="clone-toggles">
+          <label class="speak-toggle"><input type="checkbox" id="autospeak" checked /> speak aloud</label>
+          <label class="speak-toggle" title="Tell the echo things to remember — it updates the memory file."><input type="checkbox" id="train-mode" /> train mode</label>
+        </div>
+      </div>
+      <p id="train-note" class="hint clone-intro"></p>
+      <div id="clone-log" class="chat-log"></div>
+      <div class="chat-input">
+        <textarea id="clone-msg" rows="2" placeholder="Talk to your echo…"></textarea>
+        <button id="btn-clone-send" class="primary">Send</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">Local demo · LM Studio + Audio8 TTS · nothing leaves this machine</footer>
+<script src="/app.js"></script>
+</body>
+</html>
